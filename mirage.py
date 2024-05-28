@@ -2,8 +2,9 @@ import cv2
 import numpy as np
 
 WINDOW_NAME = 'Mirage'
-FACEBOX_MARGIN = 30  # pixels
+FACEBOX_MARGIN = 40  # pixels
 PIXELATION_GRID_SIZE = 10  # pixels
+FACE_SIZE_MIN = 30  # pixels
 
 # Load the pre-trained Haar Cascade Classifier for face detection
 face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
@@ -29,7 +30,7 @@ def getFrame():
 # Returns a list of detected faces in the frame
 def FacesInFrame(frame):
     grayscaleFrame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    faces = face_cascade.detectMultiScale(grayscaleFrame, scaleFactor=1.3, minNeighbors=5, minSize=(10, 10))
+    faces = face_cascade.detectMultiScale(grayscaleFrame, scaleFactor=1.3, minNeighbors=5, minSize=(FACE_SIZE_MIN, FACE_SIZE_MIN))
     return faces
 
 
@@ -49,19 +50,27 @@ def scrambleFacesInFrame(frame, faces):
                 face[i:i + PIXELATION_GRID_SIZE, j:j + PIXELATION_GRID_SIZE] = np.mean(face[i:i + PIXELATION_GRID_SIZE, j:j + PIXELATION_GRID_SIZE])
 
 
+# Scrambles the entire frame
+def scrambleFrame(frame):
+    newframe = cv2.cvtColor(np.random.randint(0, 256, (frame_height, frame_width, 3), dtype=np.uint8), cv2.COLOR_BGR2GRAY)
+    for i in range(0, frame_height, PIXELATION_GRID_SIZE):
+        for j in range(0, frame_width, PIXELATION_GRID_SIZE):
+            newframe[i:i + PIXELATION_GRID_SIZE, j:j + PIXELATION_GRID_SIZE] = np.mean(newframe[i:i + PIXELATION_GRID_SIZE, j:j + PIXELATION_GRID_SIZE])
+    return newframe
+
+
 while True:
     frame = getFrame()
     faces = FacesInFrame(frame)
 
-    # If there's a face, blur it
+    # Run face detection. If it failed, we scramble everything.
     if len(faces) != 0:
         scrambleFacesInFrame(frame, faces)
+        if len(FacesInFrame(frame)) != 0:
+            frame = scrambleFrame(frame)
 
     else:
-        frame = cv2.cvtColor(np.random.randint(0, 256, (frame_height, frame_width, 3), dtype=np.uint8), cv2.COLOR_BGR2GRAY)
-        for i in range(0, frame_height, PIXELATION_GRID_SIZE):
-            for j in range(0, frame_width, PIXELATION_GRID_SIZE):
-                frame[i:i + PIXELATION_GRID_SIZE, j:j + PIXELATION_GRID_SIZE] = np.mean(frame[i:i + PIXELATION_GRID_SIZE, j:j + PIXELATION_GRID_SIZE])
+        frame = scrambleFrame(frame)
 
     # Display the frame
     cv2.imshow(WINDOW_NAME, frame)
